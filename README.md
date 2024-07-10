@@ -35,6 +35,7 @@ These instructions are for if you want to patch the firmware yourself before ins
   ```
   git apply rtl8720dn_wps_common.patch
   ```
+  This patch adds the necessary byte rotation required for the WPS PIN authentication.
 1. From the `wpa_supplicant` repository, compile **only** `src/wps/wps_common.c` using the following command:
   ```
   arm-none-eabi-gcc -march=armv8-m.main+fp -mfloat-abi=hard -c -O2 -DRTL8720DN -I<drc-hostap-directory>/src/utils -I<drc-hostap-directory>/src -D__BYTE_ORDER=__LITTLE_ENDIAN -DCONFIG_TENDONIN <drc-hostap-directory>/src/wps/wps_common.c
@@ -48,6 +49,7 @@ These instructions are for if you want to patch the firmware yourself before ins
   ```
   arm-none-eabi-gcc -march=armv8-m.main+fp -mfloat-abi=hard -c -O2 -D__BYTE_ORDER=__LITTLE_ENDIAN rom_rtw_psk_wiiu.c
   ```
+  This is a decompilation/reimplementation of Realtek's PTK calculation function that adds the byte rotation required for connection to the Wii U.
 1. You should now have a compiled object file `rom_rtw_psk_wiiu.o`. Inject it into the existing `lib_wlan.a` file using AR:
   ```
   ar r lib_wlan.a rom_rtw_psk_wiiu.o
@@ -58,8 +60,8 @@ These instructions are for if you want to patch the firmware yourself before ins
   rom_rtw_ieee80211.o
   ```
 1. Using a hex editor, do the following:
-  - In `rom_rtw_psk.o`, replace all instances of `rom_psk_CalcPTK` with `rom_psk_CalcNVM` (can be anything as long as it's the same length and not the original string).
-  - In `rom_rtw_ieee80211.o`, go to offsets `0xB34` and `0xB3C` and replace the three bytes `00 0F AC` at each offset with `A4 C0 E1`
+  - In `rom_rtw_psk.o`, replace all instances of `rom_psk_CalcPTK` with `rom_psk_CalcNVM` (can be anything as long as it's the same length and not the original string). This will ensure the Arduino compiler will use our PTK calculation function instead of Realtek's.
+  - In `rom_rtw_ieee80211.o`, go to offsets `0xB34` and `0xB3C` and replace the three bytes `00 0F AC` at each offset with `A4 C0 E1`. This will spoof our OUI (organizationally unique identifier) to Nintendo's so the console believes we are a gamepad.
 1. Inject these modified objects back into `lib_wlan.a` using AR:
   ```
   ar r lib_wlan.a rom_rtw_psk.o
