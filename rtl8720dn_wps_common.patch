@@ -1,0 +1,172 @@
+diff --git a/src/utils/includes.h b/src/utils/includes.h
+index 75513fc8c..59d0f7671 100644
+--- a/src/utils/includes.h
++++ b/src/utils/includes.h
+@@ -32,6 +32,7 @@
+ #include <unistd.h>
+ #endif /* _MSC_VER */
+ 
++#ifndef RTL8720DN
+ #ifndef CONFIG_NATIVE_WINDOWS
+ #include <sys/socket.h>
+ #include <netinet/in.h>
+@@ -41,5 +42,6 @@
+ #include <sys/time.h>
+ #endif /* __vxworks */
+ #endif /* CONFIG_NATIVE_WINDOWS */
++#endif /* RTL8720DN */
+ 
+ #endif /* INCLUDES_H */
+diff --git a/src/utils/os.h b/src/utils/os.h
+index e8f0b7927..82601150b 100644
+--- a/src/utils/os.h
++++ b/src/utils/os.h
+@@ -282,6 +282,16 @@ static inline void * os_calloc(size_t nmemb, size_t size)
+ }
+ 
+ 
++#ifdef RTL8720DN
++extern void *rtw_memcpy(void *destination, const void *source, size_t num);
++extern int _rtl_snprintf ( char * s, size_t n, const char * format, ... );
++extern size_t _strlen (const char *__s);
++#define os_memcpy rtw_memcpy
++#define os_snprintf _rtl_snprintf
++#define os_strlen _strlen
++#endif // RTL8720DN
++
++
+ /*
+  * The following functions are wrapper for standard ANSI C or POSIX functions.
+  * By default, they are just defined to use the standard function name and no
+diff --git a/src/wps/wps_common.c b/src/wps/wps_common.c
+index 2ba47832b..46c60c018 100644
+--- a/src/wps/wps_common.c
++++ b/src/wps/wps_common.c
+@@ -20,6 +20,25 @@
+ #include "wps_i.h"
+ #include "wps_dev_attr.h"
+ 
++#ifdef RTL8720DN
++extern void rom_hmac_sha256(const u8 *key, size_t key_len, const u8 *data, size_t data_len, u8 *mac);
++extern int rom_hmac_sha256_vector(const u8 *key, size_t key_len, size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac);
++extern int rom_aes_128_cbc_decrypt(const u8 *key, const u8 *iv, u8 *data, size_t data_len);
++extern int rom_sha256_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac);
++extern void rtw_get_random_bytes(void *buf, size_t len);
++#define aes_128_cbc_decrypt rom_aes_128_cbc_decrypt
++#define hmac_sha256 rom_hmac_sha256
++#define hmac_sha256_vector rom_hmac_sha256_vector
++#define sha256_vector rom_sha256_vector
++#define random_get_bytes rtw_get_random_bytes
++#define wpa_printf (void)
++#define wpa_hexdump (void)
++#define wpa_hexdump_key (void)
++#define wpa_hexdump_buf (void)
++#define wpa_hexdump_buf_key (void)
++#define wpa_hexdump_ascii_key (void)
++#define wpabuf_clear_free wpabuf_free
++#endif
+ 
+ void wps_kdf(const u8 *key, const u8 *label_prefix, size_t label_prefix_len,
+ 	     const char *label, u8 *res, size_t res_len)
+@@ -114,9 +133,9 @@ int wps_derive_keys(struct wps_data *wps)
+ 
+ #ifdef CONFIG_TENDONIN
+ 	u8 rotate_data[3];
+-	memcpy(rotate_data, kdk, 3);
+-	memmove(kdk, kdk + 3, sizeof(kdk) - 3);
+-	memcpy(kdk + sizeof(kdk) - 3, rotate_data, 3);
++	os_memcpy(rotate_data, kdk, 3);
++	os_memcpy(kdk, kdk + 3, sizeof(kdk) - 3);
++	os_memcpy(kdk + sizeof(kdk) - 3, rotate_data, 3);
+ 
+ 	wpa_hexdump_key(MSG_DEBUG, "WPS: KDK_ROT3", kdk, sizeof(kdk));
+ #endif /* CONFIG_TENDONIN */
+@@ -143,14 +162,12 @@ int wps_derive_psk(struct wps_data *wps, const u8 *dev_passwd,
+ {
+ 	u8 hash[SHA256_MAC_LEN];
+ 
+-	if (hmac_sha256(wps->authkey, WPS_AUTHKEY_LEN, dev_passwd,
+-			(dev_passwd_len + 1) / 2, hash) < 0)
+-		return -1;
++	hmac_sha256(wps->authkey, WPS_AUTHKEY_LEN, dev_passwd,
++			(dev_passwd_len + 1) / 2, hash);
+ 	os_memcpy(wps->psk1, hash, WPS_PSK_LEN);
+-	if (hmac_sha256(wps->authkey, WPS_AUTHKEY_LEN,
++	hmac_sha256(wps->authkey, WPS_AUTHKEY_LEN,
+ 			dev_passwd + (dev_passwd_len + 1) / 2,
+-			dev_passwd_len / 2, hash) < 0)
+-		return -1;
++			dev_passwd_len / 2, hash);
+ 	os_memcpy(wps->psk2, hash, WPS_PSK_LEN);
+ 
+ 	wpa_hexdump_ascii_key(MSG_DEBUG, "WPS: Device Password",
+@@ -252,8 +269,7 @@ int wps_generate_pin(unsigned int *pin)
+ 	unsigned int val;
+ 
+ 	/* Generate seven random digits for the PIN */
+-	if (random_get_bytes((unsigned char *) &val, sizeof(val)) < 0)
+-		return -1;
++	random_get_bytes((unsigned char *) &val, sizeof(val));
+ 	val %= 10000000;
+ 
+ 	/* Append checksum digit */
+@@ -262,6 +278,7 @@ int wps_generate_pin(unsigned int *pin)
+ }
+ 
+ 
++#ifndef RTL8720DN
+ int wps_pin_str_valid(const char *pin)
+ {
+ 	const char *p;
+@@ -323,7 +340,6 @@ void wps_pwd_auth_fail_event(struct wps_context *wps, int enrollee, int part,
+ 	wps->event_cb(wps->cb_ctx, WPS_EV_PWD_AUTH_FAIL, &data);
+ }
+ 
+-
+ void wps_pbc_overlap_event(struct wps_context *wps)
+ {
+ 	if (wps->event_cb == NULL)
+@@ -358,6 +374,7 @@ void wps_pbc_disable_event(struct wps_context *wps)
+ 
+ 	wps->event_cb(wps->cb_ctx, WPS_EV_PBC_DISABLE, NULL);
+ }
++#endif // RTL8720DN
+ 
+ 
+ #ifdef CONFIG_WPS_OOB
+@@ -467,7 +484,7 @@ int wps_oob_use_cred(struct wps_context *wps, struct wps_parse_attr *attr)
+ 
+ #endif /* CONFIG_WPS_OOB */
+ 
+-
++#ifndef RTL8720DN
+ int wps_dev_type_str2bin(const char *str, u8 dev_type[WPS_DEV_TYPE_LEN])
+ {
+ 	const char *pos;
+@@ -489,7 +506,7 @@ int wps_dev_type_str2bin(const char *str, u8 dev_type[WPS_DEV_TYPE_LEN])
+ 
+ 	return 0;
+ }
+-
++#endif // RTL8720DN
+ 
+ char * wps_dev_type_bin2str(const u8 dev_type[WPS_DEV_TYPE_LEN], char *buf,
+ 			    size_t buf_len)
+@@ -505,7 +522,7 @@ char * wps_dev_type_bin2str(const u8 dev_type[WPS_DEV_TYPE_LEN], char *buf,
+ 	return buf;
+ }
+ 
+-
++#ifndef RTL8720DN
+ void uuid_gen_mac_addr(const u8 *mac_addr, u8 *uuid)
+ {
+ 	const u8 *addr[2];
+@@ -579,7 +596,7 @@ u16 wps_config_methods_str2bin(const char *str)
+ 
+ 	return methods;
+ }
+-
++#endif // RTL8720DN
+ 
+ struct wpabuf * wps_build_wsc_ack(struct wps_data *wps)
+ {
