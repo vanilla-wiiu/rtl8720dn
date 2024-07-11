@@ -50,7 +50,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: RTL8720DN Patches
-        path: ${{ env.GITHUB_WORKSPACE }}/lib_wps.a ${{ env.GITHUB_WORKSPACE }}/lib_wlan.a
+        path: ${{ runner.workspace }}/lib_wps.a ${{ runner.workspace }}/lib_wlan.a
 
     - name: Upload Continuous Release
       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'vanilla-wiiu/rtl8720dn' }}
