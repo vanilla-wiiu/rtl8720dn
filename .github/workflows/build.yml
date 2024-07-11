@@ -1,0 +1,66 @@
+name: Build
+on:
+  push:
+    paths-ignore:
+    - 'README.md'
+  pull_request:
+    paths-ignore:
+    - 'README.md'
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: sudo apt install gcc-arm-none-eabi p7zip-full curl
+    
+    - name: Acquire original binaries
+      run: |
+        curl -fLOSs https://github.com/ambiot/ambd_arduino/raw/dev/Arduino_package/hardware/variants/common_libs/lib_wps.a
+        curl -fLOSs https://github.com/ambiot/ambd_arduino/raw/dev/Arduino_package/hardware/variants/common_libs/lib_wlan.a
+    
+    - name: Compile WPS patch
+      run: |
+        git clone --depth 1 https://github.com/rolandoislas/drc-hostap.git
+        cd drc-hostap
+        git apply ../rtl8720dn_wps_common.patch
+        cd src/wps
+        arm-none-eabi-gcc -march=armv8-m.main+fp -mfloat-abi=hard -c -O2 -DRTL8720DN -I../utils -I.. -D__BYTE_ORDER=__LITTLE_ENDIAN -DCONFIG_TENDONIN wps_common.c
+        arm-none-eabi-ar r "$GITHUB_WORKSPACE/lib_wps.a" wps_common.o
+    
+    - name: Make binary hex patches
+      run: |
+        7z x lib_wlan.a
+        printf '\xA4\xC0\xE1' | dd of=rom_rtw_ieee80211.o bs=1 seek=2868 count=3 conv=notrunc
+        printf '\xA4\xC0\xE1' | dd of=rom_rtw_ieee80211.o bs=1 seek=2876 count=3 conv=notrunc
+        printf 'NVM' | dd of=rom_rtw_psk.o bs=1 seek=1616 count=3 conv=notrunc
+        printf 'NVM' | dd of=rom_rtw_psk.o bs=1 seek=1911 count=3 conv=notrunc
+        arm-none-eabi-ar r "$GITHUB_WORKSPACE/lib_wlan.a" rom_rtw_psk.o
+        arm-none-eabi-ar r "$GITHUB_WORKSPACE/lib_wlan.a" rom_rtw_ieee80211.o
+    
+    - name: Compile PTK patch
+      run: |
+        arm-none-eabi-gcc -march=armv8-m.main+fp -mfloat-abi=hard -c -O2 -D__BYTE_ORDER=__LITTLE_ENDIAN rom_rtw_psk_wiiu.c
+        arm-none-eabi-ar r "$GITHUB_WORKSPACE/lib_wlan.a" rom_rtw_psk_wiiu.o
+    
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: RTL8720DN Patches
+        path: |
+          ${{ github.workspace }}/lib_wps.a
+          ${{ github.workspace }}/lib_wlan.a
+
+    - name: Upload Continuous Release
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'vanilla-wiiu/rtl8720dn' }}
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        curl -fLOSs --retry 2 --retry-delay 60 https://github.com/probonopd/uploadtool/raw/master/upload.sh
+        bash upload.sh lib_wps.a
+        bash upload.sh lib_wlan.a
+      
