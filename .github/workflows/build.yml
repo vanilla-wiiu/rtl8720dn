@@ -31,11 +31,6 @@ jobs:
         arm-none-eabi-gcc -march=armv8-m.main+fp -mfloat-abi=hard -c -O2 -DRTL8720DN -I../utils -I.. -D__BYTE_ORDER=__LITTLE_ENDIAN -DCONFIG_TENDONIN wps_common.c
         arm-none-eabi-ar r "$GITHUB_WORKSPACE/lib_wps.a" wps_common.o
     
-    - name: Compile PTK patch
-      run: |
-        arm-none-eabi-gcc -march=armv8-m.main+fp -mfloat-abi=hard -c -O2 -D__BYTE_ORDER=__LITTLE_ENDIAN rom_rtw_psk_wiiu.c
-        arm-none-eabi-ar r "$GITHUB_WORKSPACE/lib_wlan.a" rom_rtw_psk_wiiu.o
-    
     - name: Make binary hex patches
       run: |
         7z x lib_wlan.a
@@ -45,6 +40,11 @@ jobs:
         printf 'NVM' | dd of=rom_rtw_psk.o bs=1 seek=1911 count=3 conv=notrunc
         arm-none-eabi-ar r "$GITHUB_WORKSPACE/lib_wlan.a" rom_rtw_psk.o
         arm-none-eabi-ar r "$GITHUB_WORKSPACE/lib_wlan.a" rom_rtw_ieee80211.o
+    
+    - name: Compile PTK patch
+      run: |
+        arm-none-eabi-gcc -march=armv8-m.main+fp -mfloat-abi=hard -c -O2 -D__BYTE_ORDER=__LITTLE_ENDIAN rom_rtw_psk_wiiu.c
+        arm-none-eabi-ar r "$GITHUB_WORKSPACE/lib_wlan.a" rom_rtw_psk_wiiu.o
     
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4
