@@ -45,20 +45,14 @@ jobs:
       run: |
         arm-none-eabi-gcc -march=armv8-m.main+fp -mfloat-abi=hard -c -O2 -D__BYTE_ORDER=__LITTLE_ENDIAN rom_rtw_psk_wiiu.c
         arm-none-eabi-ar r "$GITHUB_WORKSPACE/lib_wlan.a" rom_rtw_psk_wiiu.o
-
-    - name: Where the fuck are we?
-      run: |
-        pwd
-        echo $GITHUB_WORKSPACE
-        echo ${{ github.workspace }}
-        echo ${{ runner.workspace }}
-        ls -l
     
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4
       with:
         name: RTL8720DN Patches
-        path: ${{ runner.workspace }}/lib_wps.a ${{ runner.workspace }}/lib_wlan.a
+        path: |
+          ${{ github.workspace }}/lib_wps.a
+          ${{ github.workspace }}/lib_wlan.a
 
     - name: Upload Continuous Release
       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'vanilla-wiiu/rtl8720dn' }}
