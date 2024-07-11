@@ -13,7 +13,6 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-        path: ''
 
     - name: Install dependencies
       run: sudo apt install gcc-arm-none-eabi p7zip-full curl
@@ -51,7 +50,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: RTL8720DN Patches
-        path: ${{ github.workspace }}/lib_wps.a ${{ github.workspace }}/lib_wlan.a
+        path: ${{ env.GITHUB_WORKSPACE }}/lib_wps.a ${{ env.GITHUB_WORKSPACE }}/lib_wlan.a
 
     - name: Upload Continuous Release
       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'vanilla-wiiu/rtl8720dn' }}
