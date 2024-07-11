@@ -22,6 +22,7 @@ These instructions are for if you simply want to use the patched firmware:
 
 These instructions are for if you want to patch the firmware yourself before installing and using it:
 
+1. Set up Arduino IDE for the RTL8720DN using the [official instructions](https://www.amebaiot.com/en/amebad-bw16-arduino-getting-started/).
 1. Locate the existing `lib_wps.a` and `lib_wlan.a` files in the Arduino/Realtek data folders. This will differ by platform.
   - On Linux, they are typically located in: `~/.arduino15/packages/realtek/hardware/AmebaD/3.1.7/variants/common_libs`
 1. (Optional) Back up the two files in case you want to restore normal Wi-Fi functionality later. It is not necessary to back these up, they can always be re-acquired from [Realtek's official GitHub repository](https://github.com/ambiot/ambd_arduino/tree/dev/Arduino_package/hardware/variants/common_libs).
