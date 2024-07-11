@@ -45,6 +45,13 @@ jobs:
       run: |
         arm-none-eabi-gcc -march=armv8-m.main+fp -mfloat-abi=hard -c -O2 -D__BYTE_ORDER=__LITTLE_ENDIAN rom_rtw_psk_wiiu.c
         arm-none-eabi-ar r "$GITHUB_WORKSPACE/lib_wlan.a" rom_rtw_psk_wiiu.o
+
+    - name: Where the fuck are we?
+      run: |
+        pwd
+        echo $GITHUB_WORKSPACE
+        echo ${{ github.workspace }}
+        echo ${{ runner.workspace }}
     
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4
