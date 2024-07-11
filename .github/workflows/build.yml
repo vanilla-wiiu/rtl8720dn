@@ -52,6 +52,7 @@ jobs:
         echo $GITHUB_WORKSPACE
         echo ${{ github.workspace }}
         echo ${{ runner.workspace }}
+        ls -l
     
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4
